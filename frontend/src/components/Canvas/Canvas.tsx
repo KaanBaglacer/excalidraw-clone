@@ -381,7 +381,7 @@ export function Canvas() {
             textType: 'bound',
             text: '',
             containerId: clickedElement.id,
-            textAlign: 'center' as const,
+            textAlign: 'left' as const,
           });
           addElement(textEl);
           setEditingElementId(textEl.id);
@@ -400,7 +400,7 @@ export function Canvas() {
             textType: 'bound',
             text: '',
             containerId: clickedElement.id,
-            textAlign: 'center' as const,
+            textAlign: 'left' as const,
           });
           addElement(textEl);
           setEditingElementId(textEl.id);
@@ -621,8 +621,9 @@ export function Canvas() {
       // Keep bound text centered inside resized containers.
       for (const el of state.elements) {
         if (el.isDeleted || !isTextElement(el) || el.containerId !== target.id) continue;
+        const sourceText = el.rawText ?? el.text;
         const wrappedText = wrapText(
-          el.text,
+          sourceText,
           Math.max(1, newWidth - TEXT_CONTAINER_PADDING),
           el.fontSize,
           el.fontFamily,
@@ -631,6 +632,7 @@ export function Canvas() {
         const textWidth = Math.min(measured.width, newWidth);
         const textHeight = Math.min(measured.height, newHeight);
         updates.set(el.id, {
+          rawText: sourceText,
           text: wrappedText,
           width: textWidth,
           height: textHeight,
@@ -844,6 +846,14 @@ export function Canvas() {
       (e.target as Element).releasePointerCapture(e.pointerId);
       // If we created something valid, save history
       if (drawingElementIdRef.current) {
+        const state = useCanvasStore.getState();
+        const createdElement = state.elements.find(
+          (el) => el.id === drawingElementIdRef.current && !el.isDeleted,
+        );
+        if (createdElement && isShapeElement(createdElement)) {
+          state.setActiveTool('select');
+          state.setSelectedElementIds(new Set([createdElement.id]));
+        }
         saveHistory();
       }
     }
@@ -857,6 +867,7 @@ export function Canvas() {
   // ══════════════════════════════════════════════════════════════════════
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     const state = useCanvasStore.getState();
+    state.setActiveTool('text');
     const { x, y } = getScenePoint(e as unknown as React.PointerEvent);
 
     const hit = getElementAtPosition(state.elements, x, y);
@@ -902,7 +913,7 @@ export function Canvas() {
           textType: 'bound',
           text: '',
           containerId: hit.id,
-          textAlign: 'center' as const,
+          textAlign: 'left' as const,
         });
         addElement(textEl);
         setEditingElementId(textEl.id);
@@ -930,7 +941,7 @@ export function Canvas() {
           textType: 'bound',
           text: '',
           containerId: hit.id,
-          textAlign: 'center' as const,
+          textAlign: 'left' as const,
         });
         addElement(textEl);
         setEditingElementId(textEl.id);
@@ -989,6 +1000,7 @@ export function Canvas() {
         if (sceneNonce !== lastNonceRef.current) {
           renderStaticScene(
             staticCanvas, rc, elements, scrollX, scrollY, zoom, '#121212', null,
+            editingElementId,
           );
           lastNonceRef.current = sceneNonce;
         }
@@ -1009,13 +1021,17 @@ export function Canvas() {
     return () => cancelAnimationFrame(animFrameId);
   }, [
     staticCanvasRef, interactiveCanvasRef, elements, selectedElementIds,
-    scrollX, scrollY, zoom, sceneNonce, connectorPreview,
+    scrollX, scrollY, zoom, sceneNonce, connectorPreview, editingElementId,
   ]);
 
   // Force static re-render on viewport change
   useEffect(() => {
     lastNonceRef.current = -1;
   }, [scrollX, scrollY, zoom]);
+
+  useEffect(() => {
+    lastNonceRef.current = -1;
+  }, [editingElementId]);
 
   // ══════════════════════════════════════════════════════════════════════
   //  TEXT EDITOR CALLBACKS
@@ -1026,12 +1042,14 @@ export function Canvas() {
     const element = findTextById(state.elements, editingElementId);
 
     if (!element) {
+      useCanvasStore.getState().setActiveTool('select');
       setEditingElementId(null);
       return;
     }
 
     if (text.trim() === '') {
       deleteElements([editingElementId]);
+      useCanvasStore.getState().setActiveTool('select');
       setEditingElementId(null);
       return;
     }
@@ -1039,6 +1057,7 @@ export function Canvas() {
     const updates = buildSubmittedTextUpdate(element, state.elements, text);
     updateElement(editingElementId, updates);
     saveHistory(); // Save after text edit
+    useCanvasStore.getState().setActiveTool('select');
     setEditingElementId(null);
   }, [editingElementId, updateElement, deleteElements, saveHistory]);
 
@@ -1051,6 +1070,7 @@ export function Canvas() {
         deleteElements([editingElementId]);
       }
     }
+    useCanvasStore.getState().setActiveTool('select');
     setEditingElementId(null);
   }, [editingElementId, deleteElements]);
 
@@ -1063,6 +1083,9 @@ export function Canvas() {
     : undefined;
   const editingContainer = editingElement?.containerId
     ? elements.find((el) => el.id === editingElement.containerId && !el.isDeleted)
+    : undefined;
+  const editingShapeContainer = editingContainer && isShapeElement(editingContainer)
+    ? editingContainer
     : undefined;
 
   const showLinkDialog = useUIStore((s) => s.showLinkDialog);
@@ -1095,7 +1118,14 @@ export function Canvas() {
       {editingElement && (
         <TextEditorOverlay
           element={editingElement}
-          containerWidth={editingContainer?.width}
+          containerBounds={editingShapeContainer
+            ? {
+              x: editingShapeContainer.x,
+              y: editingShapeContainer.y,
+              width: editingShapeContainer.width,
+              height: editingShapeContainer.height,
+            }
+            : undefined}
           scrollX={scrollX}
           scrollY={scrollY}
           zoom={zoom}

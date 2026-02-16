@@ -27,7 +27,7 @@ export function getCursorForTool(tool: string): string {
 }
 
 export function isResizableElement(element: ExcalidrawElement): boolean {
-  return isShapeElement(element);
+  return isShapeElement(element) && element.type !== 'line' && element.type !== 'arrow';
 }
 
 export function getCursorForResizeHandle(handle: ResizeHandle): string {

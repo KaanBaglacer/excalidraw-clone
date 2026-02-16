@@ -108,3 +108,80 @@
 - No active save/load drawing UX wired to backend yet.
 - Export/file menu dialogs are represented in state but no complete UI flow is currently mounted.
 - Tool registry architecture (`Tool` interface) exists by type, but pointer logic is still centralized in `Canvas.tsx`.
+
+
+## Phase 1
+
+### Change Requests
+- 'rectangle' | 'ellipse' | 'diamond' | 'cloud'  | 'hexagon' | 'parallelogram' | 'line' | 'arrow' mark these element types shape element
+- If shape element created change to select tool and select created element
+- When double click action done on anywhere on the Canvas change to Text tool and start editing
+    - Dont show any additional input field. It should be transparent and until clicked anyplace other than text stop editing.
+    - Enter should work as newline and only ESC key stops editing
+    - It should keep formatting of text when editing done.
+    - If text created in Shape type component, text and shape behave as single component.
+        - If text inside shape clicked then it is accepted as single component 
+        - If it is within a shape type component, text's center should be center of shape.
+        - Text should adapt to shape in terms of size. Text format should be same but it should be inside of shape
+### Corrected Requests for to reach current changes
+
+Use this exact Phase 1 spec for implementation.
+
+#### Scope
+- Only change frontend canvas/text interaction behavior.
+- Do not add new panels, dialogs, routes, or backend integration.
+- Keep existing styling/theme system; no new visual design system elements.
+
+#### Required Behavior
+1. Shape-element classification
+- Treat these element types as shape elements for creation/selection behavior:
+	- `rectangle`, `ellipse`, `diamond`, `cloud`, `hexagon`, `parallelogram`, `line`, `arrow`.
+
+2. Post-creation tool flow
+- After creating any shape element from the list above:
+	- switch active tool to `select`
+	- select the newly created element.
+
+3. Double-click text entry flow
+- Double-click anywhere on canvas must:
+	- switch active tool to `text`
+	- open inline text editing immediately.
+
+4. Text editor overlay behavior
+- Use transparent inline editing (no boxed input UI styling).
+- Editing ends only when:
+	- user presses `Escape`, or
+	- focus leaves text editing (click outside text).
+- `Enter` must insert newline (must not submit/finish editing).
+
+5. Text visibility while editing
+- When a text element is being edited, hide that same text in static canvas render so only the editor content is visible.
+
+6. Tool state after editing
+- On text edit finish (submit/cancel), switch active tool to `select`.
+
+7. Bound text + shape coupling
+- Text bound to shape behaves as part of shape interactions:
+	- clicking bound text should resolve to/select its container shape for shape-level interactions.
+- If text is inside a shape:
+	- editing overlay position should be centered relative to shape center,
+	- editing text should type left-aligned from line start,
+	- text block should remain centered in shape after edit finalize.
+
+8. Resize reflow behavior
+- For bound text:
+	- when container shrinks, wrap text tighter to fit,
+	- when container expands, reflow from original typed content (not already wrapped lines) so formatting can expand back naturally.
+
+#### Data/State Notes
+- Keep soft-delete behavior (`isDeleted`) unchanged.
+- Preserve undo/redo snapshot behavior.
+- If needed, store original typed text source for bound-text reflow (for example `rawText`) while rendering wrapped `text`.
+
+#### Acceptance Criteria
+- Creating shape -> tool becomes `select` and created shape is selected.
+- Double-click empty area -> transparent text editor opens, `Enter` adds newline, `Escape` ends edit.
+- Double-click existing text -> canvas text hides during edit and reappears after finish.
+- Bound text click is treated as shape interaction target.
+- Bound text stays visually centered in shape after finalize.
+- Shrink shape wraps text; expand shape restores wider line layout from original input.

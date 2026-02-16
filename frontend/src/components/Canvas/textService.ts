@@ -17,6 +17,7 @@ export function buildSubmittedTextUpdate(
   text: string,
 ) {
   let finalText = text;
+  const isBound = Boolean(element.containerId);
   if (element.containerId) {
     const container = allElements.find((el) => el.id === element.containerId);
     if (container) {
@@ -31,6 +32,7 @@ export function buildSubmittedTextUpdate(
     width,
     height,
     baseline,
+    ...(isBound ? { rawText: text } : {}),
   };
 
   if (element.containerId) {
