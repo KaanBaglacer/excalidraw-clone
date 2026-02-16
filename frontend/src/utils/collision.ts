@@ -92,7 +92,7 @@ export function getElementsInRect(
 }
 
 const SHAPE_TYPES = new Set([
-    'rectangle', 'ellipse', 'diamond', 'cloud', 'hexagon', 'parallelogram',
+    'rectangle', 'ellipse', 'diamond', 'cloud', 'hexagon', 'parallelogram', 'line', 'arrow',
 ]);
 
 export function isShapeElement(element: ExcalidrawElement): boolean {

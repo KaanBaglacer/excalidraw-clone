@@ -107,6 +107,7 @@ export interface ExcalidrawTextElement extends ExcalidrawElementBase {
   type: 'text';
   textType: TextType;
   text: string;
+  rawText?: string;
   fontSize: number;
   fontFamily: FontFamily;
   textAlign: TextAlign;

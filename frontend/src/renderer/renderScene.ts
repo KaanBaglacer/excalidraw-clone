@@ -13,6 +13,7 @@ export function renderStaticScene(
   zoom: number,
   backgroundColor: string,
   gridSize: number | null,
+  hiddenTextElementId?: string | null,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -36,7 +37,7 @@ export function renderStaticScene(
 
   // Render elements sorted by z-index
   const visibleElements = elements
-    .filter((el) => !el.isDeleted)
+    .filter((el) => !el.isDeleted && el.id !== hiddenTextElementId)
     .sort((a, b) => a.index - b.index);
 
   for (const element of visibleElements) {
